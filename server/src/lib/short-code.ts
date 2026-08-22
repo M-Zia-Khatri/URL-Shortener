@@ -1,0 +1,1 @@
+import { randomBytes } from 'node:crypto'; const alphabet='0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'; export function generateShortCode(length=7){const bytes=randomBytes(length); return [...bytes].map(b=>alphabet[b%alphabet.length]).join('')}

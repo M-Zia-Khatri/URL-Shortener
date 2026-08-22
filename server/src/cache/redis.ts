@@ -1,0 +1,2 @@
+import { Redis } from 'ioredis'; import { env } from '../config/env.js'; import type { FastifyBaseLogger } from 'fastify';
+export function createRedis(log?:FastifyBaseLogger){const redis=new Redis(env.REDIS_URL,{lazyConnect:true,maxRetriesPerRequest:1,retryStrategy:(t:number)=>Math.min(t*100,2000)}); redis.on('error',(error:Error)=>log?.warn({error},'Redis unavailable; using Postgres')); redis.connect().catch((error:Error)=>log?.warn({error},'Redis connection unavailable; using Postgres')); return redis}

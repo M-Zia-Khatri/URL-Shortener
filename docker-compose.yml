@@ -1,0 +1,33 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment: { POSTGRES_DB: urlshortener, POSTGRES_USER: urlshortener, POSTGRES_PASSWORD: urlshortener }
+    ports: ["5432:5432"]
+    volumes: ["./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro"]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U urlshortener -d urlshortener"], interval: 5s, timeout: 5s, retries: 10 }
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    healthcheck: { test: ["CMD", "redis-cli", "ping"], interval: 5s, timeout: 5s, retries: 10 }
+  server:
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "corepack enable && pnpm install && pnpm --filter server dev"
+    volumes: [".:/app"]
+    env_file: .env
+    ports: ["3000:3000"]
+    depends_on: { postgres: { condition: service_healthy }, redis: { condition: service_healthy } }
+  worker:
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "corepack enable && pnpm install && pnpm --filter server worker"
+    volumes: [".:/app"]
+    env_file: .env
+    depends_on: { postgres: { condition: service_healthy }, redis: { condition: service_healthy } }
+  client:
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "corepack enable && pnpm install && pnpm --filter client dev --host 0.0.0.0"
+    volumes: [".:/app"]
+    ports: ["5173:5173"]
+    depends_on: { server: { condition: service_started } }

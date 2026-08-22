@@ -1,0 +1,1 @@
+import { buildApp } from './app.js'; import { connectWithRetry,pool } from './db/client.js'; import { env } from './config/env.js'; const app=await buildApp(); try {await connectWithRetry();await app.listen({port:env.PORT,host:'0.0.0.0'})}catch(error){app.log.error(error);await app.close();await pool.end();process.exit(1)}

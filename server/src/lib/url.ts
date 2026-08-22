@@ -1,0 +1,1 @@
+import { BadRequestError } from './errors.js'; export function validateUrl(value:string){try {const parsed=new URL(value); if(!['http:','https:'].includes(parsed.protocol)) throw new Error(); return parsed.toString()} catch {throw new BadRequestError('originalUrl must use http or https')}}

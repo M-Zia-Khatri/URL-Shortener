@@ -1,0 +1,1 @@
+-- The initial schema is provisioned by docker/postgres/init.sql for local Docker environments.

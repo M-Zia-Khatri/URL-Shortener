@@ -1,0 +1,1 @@
+import { UrlForm } from '../features/urls/UrlForm'; export function HomePage({onCreate}:{onCreate:(url:string,expiresAt?:string)=>Promise<void>}){return <main><h1>Shorten every link</h1><p>Fast, simple URL shortener with no account required.</p><UrlForm onCreate={onCreate}/></main>}

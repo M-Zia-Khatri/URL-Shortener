@@ -1,0 +1,1 @@
+import type { Redis } from 'ioredis'; export class RateLimitStore {constructor(private redis:Redis){} async increment(key:string){try {const v=await this.redis.incr(key); if(v===1) await this.redis.expire(key,60); return v}catch{return 0}}}

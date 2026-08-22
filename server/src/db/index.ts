@@ -1,0 +1,1 @@
+import { drizzle } from 'drizzle-orm/node-postgres'; import { pool } from './client.js'; export const db=drizzle({client:pool}); export * from './schema/urls.js'; export * from './schema/url-clicks.js';

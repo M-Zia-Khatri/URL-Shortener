@@ -1,0 +1,1 @@
+import type { FastifyRequest } from 'fastify'; import type { AnalyticsService } from './analytics.service.js'; export class AnalyticsController {constructor(private service:AnalyticsService){} get=(r:FastifyRequest<{Params:{id:string}}>)=>this.service.get(r.params.id)}

@@ -1,0 +1,1 @@
+import type { Url } from '../lib/api'; import { UrlList } from '../features/urls/UrlList'; export function UrlsPage({urls,onDelete}:{urls:Url[];onDelete:(id:string)=>Promise<void>}){return <main><UrlList urls={urls} onDelete={onDelete}/></main>}
