@@ -3,6 +3,7 @@ import { RateLimitError } from '../lib/errors.js';
 import type { RateLimitStore } from '../cache/rate-limit-store.js';
 
 type RateLimitCategory = 'create' | 'management' | 'redirect' | 'analytics';
+const violations: Record<RateLimitCategory, number> = { create: 0, management: 0, redirect: 0, analytics: 0 };
 
 export function rateLimit(store: RateLimitStore, bucket: RateLimitCategory, limit: number, windowSeconds: number) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
@@ -21,6 +22,8 @@ export function rateLimit(store: RateLimitStore, bucket: RateLimitCategory, limi
 
     if (result.count > limit) {
       reply.header('Retry-After', result.ttl);
+      violations[bucket]++;
+      request.log.warn({ event: 'RATE_LIMITED', bucket, ip: request.ip, limit, ttl: result.ttl, violationCount: violations[bucket] }, 'Rate limit exceeded');
       throw new RateLimitError();
     }
   };

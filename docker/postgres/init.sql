@@ -18,6 +18,7 @@ CREATE INDEX IF NOT EXISTS urls_expires_at_idx ON urls(expires_at);
 
 CREATE TABLE IF NOT EXISTS url_clicks (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id uuid NOT NULL,
   url_id uuid NOT NULL,
   clicked_at timestamptz NOT NULL DEFAULT now(),
   referrer text,
@@ -26,5 +27,7 @@ CREATE TABLE IF NOT EXISTS url_clicks (
   CONSTRAINT url_clicks_url_id_fk FOREIGN KEY (url_id) REFERENCES urls(id) ON DELETE CASCADE
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS url_clicks_event_id_unique ON url_clicks(event_id);
 CREATE INDEX IF NOT EXISTS url_clicks_url_id_idx ON url_clicks(url_id);
 CREATE INDEX IF NOT EXISTS url_clicks_clicked_at_idx ON url_clicks(clicked_at);
+CREATE INDEX IF NOT EXISTS url_clicks_url_id_clicked_at_idx ON url_clicks(url_id, clicked_at DESC);

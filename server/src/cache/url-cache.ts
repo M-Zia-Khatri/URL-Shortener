@@ -7,6 +7,9 @@ type CacheLookup = { status: 'hit'; url: UrlRow } | { status: 'negative-hit' } |
 const NEGATIVE_CACHE_VALUE = '__missing__';
 
 export class UrlCache {
+  private hits = 0;
+  private misses = 0;
+
   constructor(
     private redis: Redis,
     private ttl: number,
@@ -22,14 +25,17 @@ export class UrlCache {
     try {
       const value = await this.redis.get(this.key(code));
       if (!value) {
-        this.log?.info({ shortCode: code, cache: 'miss' }, 'URL cache miss');
+        this.misses++;
+        this.log?.info({ event: 'CACHE_MISS', shortCode: code, cache: 'miss', cacheHitRatio: this.hits / Math.max(this.hits + this.misses, 1) }, 'URL cache miss');
         return { status: 'miss' };
       }
       if (value === NEGATIVE_CACHE_VALUE) {
-        this.log?.info({ shortCode: code, cache: 'negative-hit' }, 'URL negative cache hit');
+        this.hits++;
+        this.log?.info({ event: 'CACHE_HIT', shortCode: code, cache: 'negative-hit', cacheHitRatio: this.hits / Math.max(this.hits + this.misses, 1) }, 'URL negative cache hit');
         return { status: 'negative-hit' };
       }
-      this.log?.info({ shortCode: code, cache: 'hit' }, 'URL cache hit');
+      this.hits++;
+      this.log?.info({ event: 'CACHE_HIT', shortCode: code, cache: 'hit', cacheHitRatio: this.hits / Math.max(this.hits + this.misses, 1) }, 'URL cache hit');
       return { status: 'hit', url: JSON.parse(value) as UrlRow };
     } catch (error) {
       this.log?.warn({ error, shortCode: code }, 'URL cache read failed; falling through to Postgres');

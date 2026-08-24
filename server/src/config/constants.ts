@@ -1,1 +1,9 @@
-export const SHORT_CODE_LENGTH=7; export const SHORT_CODE_ATTEMPTS=8; export const CLICK_STREAM='url-clicks'; export const CLICK_GROUP='analytics-workers';
+export const SHORT_CODE_LENGTH = 7;
+export const SHORT_CODE_ATTEMPTS = 8;
+export const CLICK_STREAM = 'url-clicks';
+export const CLICK_GROUP = 'analytics-workers';
+export const CLICK_DEAD_LETTER_STREAM = 'url-clicks-dead-letter';
+export const WORKER_BATCH_SIZE = 50;
+export const WORKER_BLOCK_MS = 5000;
+export const WORKER_IDLE_CLAIM_MS = 30000;
+export const WORKER_RETRY_CAP = 5;
