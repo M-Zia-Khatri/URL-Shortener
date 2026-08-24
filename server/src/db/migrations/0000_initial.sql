@@ -28,3 +28,9 @@ CREATE TABLE IF NOT EXISTS url_clicks (
 
 CREATE INDEX IF NOT EXISTS url_clicks_url_id_idx ON url_clicks(url_id);
 CREATE INDEX IF NOT EXISTS url_clicks_clicked_at_idx ON url_clicks(clicked_at);
+
+ALTER TABLE url_clicks ADD COLUMN IF NOT EXISTS event_id uuid;
+UPDATE url_clicks SET event_id = gen_random_uuid() WHERE event_id IS NULL;
+ALTER TABLE url_clicks ALTER COLUMN event_id SET NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS url_clicks_event_id_unique ON url_clicks(event_id);
+CREATE INDEX IF NOT EXISTS url_clicks_url_id_clicked_at_idx ON url_clicks(url_id, clicked_at DESC);

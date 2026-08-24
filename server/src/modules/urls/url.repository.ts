@@ -1,4 +1,4 @@
-import { desc, eq } from 'drizzle-orm';
+import { count, desc, eq } from 'drizzle-orm';
 import type { DatabaseError } from 'pg';
 import { db, urls } from '../../db/index.js';
 
@@ -45,16 +45,20 @@ export class UrlRepository {
   }
 
   async list(page = 1, limit = 20) {
-    const items = await db
-      .select()
-      .from(urls)
-      .orderBy(desc(urls.createdAt))
-      .limit(limit)
-      .offset((page - 1) * limit);
-    return { items, page, limit };
+    const [items, totalRows] = await Promise.all([
+      db
+        .select()
+        .from(urls)
+        .orderBy(desc(urls.createdAt))
+        .limit(limit)
+        .offset((page - 1) * limit),
+      db.select({ total: count() }).from(urls),
+    ]);
+    const total = totalRows[0]?.total ?? 0;
+    return { items, page, pageSize: limit, total, hasMore: page * limit < total };
   }
 
-  update(id: string, data: Partial<Pick<UrlRow, 'originalUrl' | 'expiresAt'>>) {
+  update(id: string, data: Partial<Pick<UrlRow, 'originalUrl' | 'expiresAt' | 'isActive'>>) {
     return db
       .update(urls)
       .set({ ...data, updatedAt: new Date() })
