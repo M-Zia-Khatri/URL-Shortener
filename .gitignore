@@ -22,6 +22,7 @@
 *.njsproj
 *.sln
 *.sw?
-
-*.env.*
+.temp*
+*.env*
 !*.env.example
+.pnpm-store*
