@@ -29,7 +29,7 @@ services:
   installer:
     image: node:22-alpine
     working_dir: /app
-    command: sh -c "corepack enable && corepack pnpm install --frozen-lockfile"
+    command: sh -c "corepack enable && corepack pnpm install"
     environment:
       CI: "true"
     volumes:
@@ -37,6 +37,10 @@ services:
       - workspace_node_modules:/app/node_modules
       - client_node_modules:/app/client/node_modules
       - server_node_modules:/app/server/node_modules
+      # Add these lines to isolate container node_modules from host leaks:
+      - /app/node_modules
+      - /app/client/node_modules
+      - /app/server/node_modules
     depends_on:
       postgres:
         condition: service_healthy
