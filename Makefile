@@ -43,7 +43,7 @@ check:
 	pnpm check
 
 ci:
-	pnpm ci
+	pnpm run ci
 
 db-generate:
 	pnpm db:generate
