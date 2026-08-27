@@ -5,6 +5,7 @@ const schema = z.object({
   DATABASE_URL: z.string().url(),
   REDIS_URL: z.string().url(),
   PORT: z.coerce.number().int().positive().default(3000),
+  BODY_LIMIT_BYTES: z.coerce.number().int().positive().default(1048576),
   CLIENT_URL: z.string().url(),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PUBLIC_BASE_URL: z.string().url().default('http://localhost:3000'),

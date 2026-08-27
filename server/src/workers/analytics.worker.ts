@@ -12,6 +12,7 @@ import {
 import { db } from '../db/index.js';
 import { urlClicks } from '../db/schema/url-clicks.js';
 
+const SHUTDOWN_TIMEOUT_MS = 10_000;
 const redis = createRedis();
 const consumer = `worker-${process.pid}`;
 let stopping = false;
@@ -123,8 +124,14 @@ async function logMonitoring() {
 }
 
 async function shutdown(signal: string) {
+  if (stopping) return;
   stopping = true;
-  console.log(JSON.stringify({ event: 'ANALYTICS_WORKER_SHUTDOWN', signal, processed, failures }));
+  console.log(JSON.stringify({ event: 'ANALYTICS_WORKER_SHUTDOWN_STARTED', signal, processed, failures }));
+  const timeout = setTimeout(() => {
+    console.error(JSON.stringify({ event: 'ANALYTICS_WORKER_SHUTDOWN_TIMEOUT', signal }));
+    process.exit(1);
+  }, SHUTDOWN_TIMEOUT_MS);
+  timeout.unref();
 }
 
 process.once('SIGTERM', () => void shutdown('SIGTERM'));
@@ -161,6 +168,7 @@ async function run() {
     for (const [, messages] of rows) for (const message of messages as StreamMessage[]) await handleMessage(message);
   }
   await redis.quit().catch(() => undefined);
+  console.log(JSON.stringify({ event: 'ANALYTICS_WORKER_SHUTDOWN_COMPLETE', processed, failures }));
 }
 
 run().catch((error) => {

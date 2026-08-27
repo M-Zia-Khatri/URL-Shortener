@@ -2,7 +2,10 @@ import { z } from 'zod';
 
 export const idParams = z.object({ id: z.string().uuid() });
 export const codeParams = z.object({ code: z.string().min(6).max(16) });
-export const createUrlBody = z.object({ originalUrl: z.string().min(1), expiresAt: z.coerce.date().optional() });
+const createUrl = z.object({
+  destination: z.string().url(),
+});
+export const createUrlBody = z.toJSONSchema(createUrl);
 export const updateUrlBody = z
   .object({ originalUrl: z.string().min(1).optional(), expiresAt: z.union([z.coerce.date(), z.null()]).optional(), isActive: z.boolean().optional() })
   .refine((v) => Object.keys(v).length > 0);
