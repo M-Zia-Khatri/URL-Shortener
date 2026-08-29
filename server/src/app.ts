@@ -1,3 +1,158 @@
-import Fastify from 'fastify'; import cors from '@fastify/cors'; import helmet from '@fastify/helmet'; import { env } from './config/env.js'; import { createRedis } from './cache/redis.js'; import { UrlCache } from './cache/url-cache.js'; import { RateLimitStore } from './cache/rate-limit-store.js'; import { UrlRepository } from './modules/urls/url.repository.js'; import { UrlService } from './modules/urls/url.service.js'; import { UrlController } from './modules/urls/url.controller.js'; import { urlRoutes } from './modules/urls/url.routes.js'; import { registerErrorHandler } from './middleware/error-handler.js'; import { registerSwagger } from './plugins/swagger.js'; import { publishClick } from './cache/click-stream.js'; import { AnalyticsRepository } from './modules/analytics/analytics.repository.js'; import { AnalyticsService } from './modules/analytics/analytics.service.js'; import { AnalyticsController } from './modules/analytics/analytics.controller.js'; import { analyticsRoutes } from './modules/analytics/analytics.routes.js';
-declare module 'fastify' { interface FastifyInstance { config:typeof env; rateStore:RateLimitStore } }
-export async function buildApp(){const app=Fastify({logger:true});app.decorate('config',env);const redis=createRedis(app.log);app.decorate('rateStore',new RateLimitStore(redis));await app.register(cors,{origin:env.CLIENT_URL});await app.register(helmet);registerErrorHandler(app);await registerSwagger(app);const repo=new UrlRepository(),cache=new UrlCache(redis,env.CACHE_TTL_SECONDS),service=new UrlService(repo,cache,(url,metadata)=>void publishClick(redis,{urlId:url.id,...metadata})),controller=new UrlController(service);app.get('/health',async()=>({status:'ok'}));urlRoutes(app,controller);analyticsRoutes(app,new AnalyticsController(new AnalyticsService(repo,new AnalyticsRepository())));app.addHook('onClose',async()=>{await redis.quit().catch(()=>{});});return app}
+import Fastify from 'fastify';
+import cors from '@fastify/cors';
+import helmet from '@fastify/helmet';
+import Ajv2020 from 'ajv/dist/2020.js';
+import addFormats from 'ajv-formats';
+
+import { env } from './config/env.js';
+import { createRedis } from './cache/redis.js';
+import { UrlCache } from './cache/url-cache.js';
+import { RateLimitStore } from './cache/rate-limit-store.js';
+
+import { UrlRepository } from './modules/urls/url.repository.js';
+import { UrlService } from './modules/urls/url.service.js';
+import { UrlController } from './modules/urls/url.controller.js';
+import { urlRoutes } from './modules/urls/url.routes.js';
+
+import { registerErrorHandler } from './middleware/error-handler.js';
+import { registerSwagger } from './plugins/swagger.js';
+
+import { publishClick } from './cache/click-stream.js';
+
+import { AnalyticsRepository } from './modules/analytics/analytics.repository.js';
+import { AnalyticsService } from './modules/analytics/analytics.service.js';
+import { AnalyticsController } from './modules/analytics/analytics.controller.js';
+import { analyticsRoutes } from './modules/analytics/analytics.routes.js';
+
+declare module 'fastify' {
+  interface FastifyInstance {
+    config: typeof env;
+    rateStore: RateLimitStore;
+  }
+}
+
+export async function buildApp() {
+  const app = Fastify({
+    logger: true,
+
+    trustProxy: env.TRUST_PROXY,
+
+    bodyLimit: env.BODY_LIMIT_BYTES,
+
+    schemaController: {
+    compilersFactory: {
+      buildValidator: () => {
+        const ajv = new Ajv2020({
+          strict: false,
+          coerceTypes: false,
+          removeAdditional: false,
+          useDefaults: true,
+          allErrors: true,
+        });
+
+        addFormats(ajv);
+
+        return ajv.compile.bind(ajv);
+      },
+    },
+  },
+  });
+
+  app.decorate('config', env);
+
+  const redis = createRedis(app.log);
+
+  app.decorate(
+    'rateStore',
+    new RateLimitStore(redis),
+  );
+
+  await app.register(cors, {
+    origin: env.CLIENT_URL,
+  });
+
+  await app.register(helmet, {
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'none'"],
+        frameAncestors: ["'none'"],
+      },
+    },
+
+    hsts:
+      env.NODE_ENV === 'production'
+        ? {
+            maxAge: 15_552_000,
+            includeSubDomains: true,
+          }
+        : false,
+  });
+
+  registerErrorHandler(app);
+
+  await registerSwagger(app);
+
+  const repo = new UrlRepository();
+
+  const cache = new UrlCache(
+    redis,
+    env.CACHE_TTL_SECONDS,
+    env.NEGATIVE_CACHE_TTL_SECONDS,
+    app.log,
+  );
+
+  const service = new UrlService(
+    repo,
+    cache,
+    (url, metadata) =>
+      void publishClick(
+        redis,
+        {
+          urlId: url.id,
+          ...metadata,
+        },
+        app.log,
+      ),
+    app.log,
+  );
+
+  const controller = new UrlController(service);
+
+  app.addHook('onResponse', async (request, reply) => {
+    request.log.info(
+      {
+        event: 'API_REQUEST_COMPLETED',
+        method: request.method,
+        path: request.url,
+        statusCode: reply.statusCode,
+        latencyMs: reply.elapsedTime,
+      },
+      'API request completed',
+    );
+  });
+
+  app.get('/health', async () => ({
+    success: true,
+    data: {
+      status: 'ok',
+    },
+  }));
+
+  urlRoutes(app, controller);
+
+  analyticsRoutes(
+    app,
+    new AnalyticsController(
+      new AnalyticsService(
+        repo,
+        new AnalyticsRepository(),
+      ),
+    ),
+  );
+
+  app.addHook('onClose', async () => {
+    await redis.quit().catch(() => {});
+  });
+
+  return app;
+}
